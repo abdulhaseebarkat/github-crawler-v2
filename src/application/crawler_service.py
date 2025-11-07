@@ -185,100 +185,100 @@ class CrawlerService:
         self.github_client = github_client
         self.database_repository = database_repository
     
-def crawl_repositories(self, target_count: int = 100000) -> int:
-    """
-    Crawl GitHub repositories and store them in the database.
+    def crawl_repositories(self, target_count: int = 100000) -> int:
+        """
+        Crawl GitHub repositories and store them in the database.
 
-    Dynamically expands search queries to reach the target number.
-    """
+        Dynamically expands search queries to reach the target number.
+        """
 
-    logger.info(f"Starting crawl for {target_count} repositories")
+        logger.info(f"Starting crawl for {target_count} repositories")
 
-    total_crawled = 0
-    batch_buffer: list[Repository] = []
-    seen_repo_ids = set()  # Track seen repos to avoid duplicates
+        total_crawled = 0
+        batch_buffer: list[Repository] = []
+        seen_repo_ids = set()  # Track seen repos to avoid duplicates
 
-    # Dynamic query generation (stars range)
-    star_ranges = [
-        "1..50", "51..100", "101..200", "201..500",
-        "501..1000", "1001..2000", "2001..5000", "5001..10000", ">10000"
-    ]
+        # Dynamic query generation (stars range)
+        star_ranges = [
+            "1..50", "51..100", "101..200", "201..500",
+            "501..1000", "1001..2000", "2001..5000", "5001..10000", ">10000"
+        ]
 
-    languages = [
-        "python", "javascript", "java", "go", "rust",
-        "typescript", "cpp", "php", "ruby", "swift", "kotlin", "c#"
-    ]
+        languages = [
+            "python", "javascript", "java", "go", "rust",
+            "typescript", "cpp", "php", "ruby", "swift", "kotlin", "c#"
+        ]
 
-    # Build a broader set of queries
-    all_queries = []
-    for rng in star_ranges:
-        all_queries.append(f"stars:{rng}")
-        for lang in languages:
-            all_queries.append(f"language:{lang} stars:{rng}")
+        # Build a broader set of queries
+        all_queries = []
+        for rng in star_ranges:
+            all_queries.append(f"stars:{rng}")
+            for lang in languages:
+                all_queries.append(f"language:{lang} stars:{rng}")
 
-    for search_query in all_queries:
-        if total_crawled >= target_count:
-            break
-
-        logger.info(f"Using search query: {search_query}")
-        cursor = None
-        query_results = 0
-        max_results_per_query = 1000  # GitHub search limit per query
-
-        while total_crawled < target_count and query_results < max_results_per_query:
-            try:
-                remaining = min(target_count - total_crawled, max_results_per_query - query_results)
-                batch_size = min(self.BATCH_SIZE, remaining)
-
-                repos, next_cursor, api_remaining = self.github_client.get_repositories(
-                    limit=batch_size,
-                    cursor=cursor,
-                    search_query=search_query
-                )
-
-                if not repos:
-                    logger.warning(f"No repositories returned from API for query: {search_query}")
-                    break
-
-                # Filter out duplicates
-                new_repos = [repo for repo in repos if repo.id not in seen_repo_ids]
-                for repo in new_repos:
-                    seen_repo_ids.add(repo.id)
-
-                batch_buffer.extend(new_repos)
-                total_crawled += len(new_repos)
-                query_results += len(repos)
-
-                logger.info(
-                    f"Crawled {total_crawled}/{target_count} repositories "
-                    f"({len(new_repos)} new, {len(repos) - len(new_repos)} duplicates). "
-                    f"API calls remaining: {api_remaining}"
-                )
-
-                # Commit in batches
-                if len(batch_buffer) >= self.BATCH_COMMIT_SIZE:
-                    self.database_repository.upsert_repositories(batch_buffer)
-                    batch_buffer = []
-
-                # Pause if rate limit low
-                if api_remaining <= 100:
-                    logger.warning(f"Low API rate limit: {api_remaining}. Pausing 1 minute...")
-                    time.sleep(60)
-
-                if next_cursor:
-                    cursor = next_cursor
-                else:
-                    logger.info(f"Reached end of results for query: {search_query}")
-                    break
-
-            except Exception as e:
-                logger.error(f"Error during crawl with query '{search_query}': {e}")
+        for search_query in all_queries:
+            if total_crawled >= target_count:
                 break
 
-    if batch_buffer:
-        self.database_repository.upsert_repositories(batch_buffer)
+            logger.info(f"Using search query: {search_query}")
+            cursor = None
+            query_results = 0
+            max_results_per_query = 1000  # GitHub search limit per query
 
-    logger.info(f"Crawl completed. Total unique repositories crawled: {total_crawled}")
-    return total_crawled
+            while total_crawled < target_count and query_results < max_results_per_query:
+                try:
+                    remaining = min(target_count - total_crawled, max_results_per_query - query_results)
+                    batch_size = min(self.BATCH_SIZE, remaining)
+
+                    repos, next_cursor, api_remaining = self.github_client.get_repositories(
+                        limit=batch_size,
+                        cursor=cursor,
+                        search_query=search_query
+                    )
+
+                    if not repos:
+                        logger.warning(f"No repositories returned from API for query: {search_query}")
+                        break
+
+                    # Filter out duplicates
+                    new_repos = [repo for repo in repos if repo.id not in seen_repo_ids]
+                    for repo in new_repos:
+                        seen_repo_ids.add(repo.id)
+
+                    batch_buffer.extend(new_repos)
+                    total_crawled += len(new_repos)
+                    query_results += len(repos)
+
+                    logger.info(
+                        f"Crawled {total_crawled}/{target_count} repositories "
+                        f"({len(new_repos)} new, {len(repos) - len(new_repos)} duplicates). "
+                        f"API calls remaining: {api_remaining}"
+                    )
+
+                    # Commit in batches
+                    if len(batch_buffer) >= self.BATCH_COMMIT_SIZE:
+                        self.database_repository.upsert_repositories(batch_buffer)
+                        batch_buffer = []
+
+                    # Pause if rate limit low
+                    if api_remaining <= 100:
+                        logger.warning(f"Low API rate limit: {api_remaining}. Pausing 1 minute...")
+                        time.sleep(60)
+
+                    if next_cursor:
+                        cursor = next_cursor
+                    else:
+                        logger.info(f"Reached end of results for query: {search_query}")
+                        break
+
+                except Exception as e:
+                    logger.error(f"Error during crawl with query '{search_query}': {e}")
+                    break
+
+        if batch_buffer:
+            self.database_repository.upsert_repositories(batch_buffer)
+
+        logger.info(f"Crawl completed. Total unique repositories crawled: {total_crawled}")
+        return total_crawled
 
 
