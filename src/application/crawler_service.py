@@ -168,7 +168,7 @@ class CrawlerService:
     "fastapi in:readme stars:>0",
     "nextjs in:readme stars:>0",
 ]
-    ]
+    
     
     def __init__(
         self,
