@@ -11,18 +11,18 @@
 ## Project Structure
 
 github-crawler/
-	 src/
- 		domain/           # Domain entities (Repository)
-		application/      # Application services (CrawlerService)
-		infrastructure/   # External integrations (GitHub API, Database)
-	scripts/
-		setup_postgres.py    # Initialize database schema
-		crawl_stars.py       # Main crawler script
-		dump_database.py     # Export data to CSV/JSON
-	.github/
-		workflows/
-			crawl.yml        # GitHub Actions pipeline
-	requirements.txt
+-------	 src/
+ ------		domain/           # Domain entities (Repository)
+ ------		application/      # Application services (CrawlerService)
+ ------		infrastructure/   # External integrations (GitHub API, Database)
+-------	scripts/
+ ------		setup_postgres.py    # Initialize database schema
+-------		crawl_stars.py       # Main crawler script
+ ------		dump_database.py     # Export data to CSV/JSON
+ ------	.github/
+ ------		workflows/
+       			crawl.yml        # GitHub Actions pipeline
+-------	requirements.txt
 
 
 ## Setup
