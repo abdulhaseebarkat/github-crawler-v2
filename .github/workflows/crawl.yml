@@ -2,9 +2,7 @@ name: GitHub Repository Crawler
 
 on:
   workflow_dispatch:
-  schedule:
-    # Run daily at 2 AM UTC
-    - cron: '0 2 * * *'
+
 
 jobs:
   crawl:
